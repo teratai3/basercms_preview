@@ -21,8 +21,8 @@ jobs:
       - name: Set Environment Variables
         run: |
           echo "DEPLOY_NAME=${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "DEPLOY_DIR=/var/www/html/${{ env.DEPLOY_NAME }}" >> $GITHUB_ENV
-          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${{ env.DEPLOY_NAME }}" >> $GITHUB_ENV
+          echo "DEPLOY_DIR=/var/www/html/$DEPLOY_NAME" >> $GITHUB_ENV
+          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/$DEPLOY_NAME" >> $GITHUB_ENV
 
       # サーバーにCakePHPプロジェクトを転送
       - name: Sync Files to Server
