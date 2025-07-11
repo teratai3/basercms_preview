@@ -41,6 +41,15 @@ jobs:
           username: ${{ secrets.REVIEW_SERVER_USER }}
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           script: |
+            # デプロイ前に古いディレクトリを削除
+            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
+              echo "Cleaning up old PR directory: ${{ env.DEPLOY_DIR }}"
+              rm -rf "${{ env.DEPLOY_DIR }}"
+            fi
+
+            # デプロイ先ディレクトリを作成
+            mkdir -p "${{ env.DEPLOY_DIR }}"
+
             cd ${{ env.DEPLOY_DIR }}
 
             # Composerで依存パッケージをインストール
