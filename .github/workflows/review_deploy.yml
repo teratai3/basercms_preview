@@ -107,7 +107,7 @@ jobs:
           script: |
             if [ -d "${{ env.DEPLOY_DIR }}" ]; then
               echo "Deleting review environment: ${{ env.DEPLOY_DIR }}"
-              sudo rm -rf ${{ env.DEPLOY_DIR }}"
+              sudo rm -rf "${{ env.DEPLOY_DIR }}"
             else
               echo "No review environment found for PR#${{ github.event.pull_request.number }}"
             fi
