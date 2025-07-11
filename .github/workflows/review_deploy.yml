@@ -20,8 +20,9 @@ jobs:
       # 必要な環境変数をセット
       - name: Set Environment Variables
         run: |
-          echo "DEPLOY_DIR=/var/www/html/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "DEPLOY_NAME=${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "DEPLOY_DIR=/var/www/html/${{ env.DEPLOY_NAME }}" >> $GITHUB_ENV
+          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${{ env.DEPLOY_NAME }}" >> $GITHUB_ENV
 
       # サーバーにCakePHPプロジェクトを転送
       - name: Sync Files to Server
@@ -69,10 +70,10 @@ jobs:
             RewriteEngine on
             RewriteBase    /
             RewriteRule    ^(\.well-known/.*)$ $1 [L]
-            RewriteRule    ^$    ${{ env.DEPLOY_DIR }}/webroot/    [L]
+            RewriteRule    ^$    ${{ env.DEPLOY_NAME }}/webroot/    [L]
             RewriteCond %{REQUEST_FILENAME} !-f
             RewriteCond %{REQUEST_FILENAME} !-d
-            RewriteRule ^ ${{ env.DEPLOY_DIR }}/webroot/index.php [L]
+            RewriteRule ^ ${{ env.DEPLOY_NAME }}/webroot/index.php [L]
             </IfModule>
             EOF
 
