@@ -32,6 +32,7 @@ jobs:
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           source: "."                      # 現在のディレクトリ配下すべてを送信
           target: "${{ env.DEPLOY_DIR }}"          # PR用のディレクトリに配置
+          rm: true
 
       # サーバー上でレビュー環境をセットアップ
       - name: Set Up CakePHP Configs
