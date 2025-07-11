@@ -24,6 +24,22 @@ jobs:
           echo "DEPLOY_DIR=/var/www/html/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
+      # 先に古いディレクトリを削除
+      - name: Clean Up Old PR Directory
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          script: |
+            # デプロイ前に古いディレクトリを削除
+            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
+              echo "Cleaning up old PR directory: ${{ env.DEPLOY_DIR }}"
+              sudo rm -rf "${{ env.DEPLOY_DIR }}"
+            fi
+            # デプロイ先ディレクトリを作成
+            mkdir -p "${{ env.DEPLOY_DIR }}"
+
       # サーバーにCakePHPプロジェクトを転送
       - name: Sync Files to Server
         uses: appleboy/scp-action@v0.1.7
@@ -42,15 +58,6 @@ jobs:
           username: ${{ secrets.REVIEW_SERVER_USER }}
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           script: |
-            # デプロイ前に古いディレクトリを削除
-            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
-              echo "Cleaning up old PR directory: ${{ env.DEPLOY_DIR }}"
-              sudo rm -rf "${{ env.DEPLOY_DIR }}"
-            fi
-
-            # デプロイ先ディレクトリを作成
-            sudo mkdir -p "${{ env.DEPLOY_DIR }}"
-
             cd ${{ env.DEPLOY_DIR }}
 
             # baserCMS権限付与
