@@ -20,8 +20,6 @@ jobs:
       # 必要な環境変数をセット
       - name: Set Environment Variables
         run: |
-          echo "PROJECT_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
-          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "DEPLOY_DIR=/var/www/html/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
@@ -33,7 +31,7 @@ jobs:
           username: ${{ secrets.REVIEW_SERVER_USER }}
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           source: "."                      # 現在のディレクトリ配下すべてを送信
-          target: "${DEPLOY_DIR}"          # PR用のディレクトリに配置
+          target: "${{ env.DEPLOY_DIR }}"          # PR用のディレクトリに配置
 
       # サーバー上でレビュー環境をセットアップ
       - name: Set Up CakePHP Configs
@@ -43,7 +41,7 @@ jobs:
           username: ${{ secrets.REVIEW_SERVER_USER }}
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           script: |
-            cd ${DEPLOY_DIR}
+            cd ${{ env.DEPLOY_DIR }}
 
             # Composerで依存パッケージをインストール
             composer install
@@ -57,7 +55,7 @@ jobs:
       # レビューURLを表示
       - name: Output Review URL
         run: |
-          echo "Review environment is available: $REVIEW_URL"
+          echo "Review environment is available: ${{ env.REVIEW_URL }}"
 
   # PRが閉じられたとき、レビュー環境を削除
   cleanup:
