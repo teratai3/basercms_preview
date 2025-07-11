@@ -105,10 +105,9 @@ jobs:
           username: ${{ secrets.REVIEW_SERVER_USER }}
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           script: |
-            DEPLOY_DIR=/var/www/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}
-            if [ -d "$DEPLOY_DIR" ]; then
-              echo "Deleting review environment: $DEPLOY_DIR"
-              rm -rf "$DEPLOY_DIR"
+            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
+              echo "Deleting review environment: ${{ env.DEPLOY_DIR }}"
+              sudo rm -rf ${{ env.DEPLOY_DIR }}"
             else
               echo "No review environment found for PR#${{ github.event.pull_request.number }}"
             fi
