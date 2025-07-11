@@ -57,12 +57,12 @@ jobs:
             sudo chown -R www-data:www-data "${{ env.DEPLOY_DIR }}"
             sudo chmod -R 775 "${{ env.DEPLOY_DIR }}"
 
-            # baserCMS特有の書き込み権限
-            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/config"
-            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/plugins"
-            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/webroot/files"
-            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/tmp"
-            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/db"
+            # baserCMS権限付与
+            sudo chmod -R 775 "${{ env.DEPLOY_DIR }}/config"
+            sudo chmod -R 775 "${{ env.DEPLOY_DIR }}/plugins"
+            sudo chmod -R 775 "${{ env.DEPLOY_DIR }}/webroot/files"
+            sudo chmod -R 775 "${{ env.DEPLOY_DIR }}/tmp"
+            sudo chmod -R 775 "${{ env.DEPLOY_DIR }}/db"
 
             # .htaccessファイルを書き換え
             cat > .htaccess <<'EOF'
