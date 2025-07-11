@@ -22,8 +22,8 @@ jobs:
         run: |
           echo "PROJECT_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
           echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "DEPLOY_DIR=/var/www/html/${PROJECT_NAME}-pr${PR_NUMBER}" >> $GITHUB_ENV
-          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${PROJECT_NAME}-pr${PR_NUMBER}" >> $GITHUB_ENV
+          echo "DEPLOY_DIR=/var/www/html/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       # サーバーにCakePHPプロジェクトを転送
       - name: Sync Files to Server
