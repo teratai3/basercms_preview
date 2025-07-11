@@ -52,8 +52,35 @@ jobs:
 
             cd ${{ env.DEPLOY_DIR }}
 
+            # 所有権とパーミッション修正
+            sudo chown -R www-data:www-data "${{ env.DEPLOY_DIR }}"
+            sudo chmod -R 775 "${{ env.DEPLOY_DIR }}"
+
+            # baserCMS特有の書き込み権限
+            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/config"
+            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/plugins"
+            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/webroot/files"
+            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/tmp"
+            sudo chmod -R 707 "${{ env.DEPLOY_DIR }}/db"
+
+            # .htaccessファイルを書き換え
+            cat > .htaccess <<'EOF'
+            <IfModule mod_rewrite.c>
+            RewriteEngine on
+            RewriteBase    /
+            RewriteRule    ^(\.well-known/.*)$ $1 [L]
+            RewriteRule    ^$    ${{ env.DEPLOY_DIR }}/webroot/    [L]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule ^ ${{ env.DEPLOY_DIR }}/webroot/index.php [L]
+            </IfModule>
+            EOF
+
             # Composerで依存パッケージをインストール
             composer install
+
+            # プラグイン内のアセットをコピー
+            bin/cake plugin assets copy
 
             # データベースマイグレーションを実行
             bin/cake migrations migrate
