@@ -1,0 +1,117 @@
+name: Deploy CakePHP Review Environment
+
+# このWorkflowはPull Requestイベントで動作する
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+env:
+  DEPLOY_NAME: "${{ github.event.repository.name }}-pr${{ github.event.pull_request.number }}"
+  DEPLOY_DIR: "/var/www/html/${{ github.event.repository.name }}-pr${{ github.event.pull_request.number }}"
+  REVIEW_URL: "https://${{ secrets.SITE_DOMAIN }}/${{ github.event.repository.name }}-pr${{ github.event.pull_request.number }}"
+
+jobs:
+  # PR作成・更新時にレビュー環境をデプロイ
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    name: Deploy Review Environment
+
+    steps:
+      # リポジトリのコードをチェックアウト
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 先に古いディレクトリを削除
+      - name: Clean Up Old PR Directory
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          script: |
+            # デプロイ前に古いディレクトリを削除
+            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
+              echo "Cleaning up old PR directory: ${{ env.DEPLOY_DIR }}"
+              sudo rm -rf "${{ env.DEPLOY_DIR }}"
+            fi
+            # デプロイ先ディレクトリを作成
+            mkdir -p "${{ env.DEPLOY_DIR }}"
+
+      # サーバーにCakePHPプロジェクトを転送
+      - name: Sync Files to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          source: "."                      # 現在のディレクトリ配下すべてを送信
+          target: "${{ env.DEPLOY_DIR }}"          # PR用のディレクトリに配置
+
+      # サーバー上でレビュー環境をセットアップ
+      - name: Set Up CakePHP Configs
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          script: |
+            cd ${{ env.DEPLOY_DIR }}
+
+            # baserCMS権限付与
+            chmod -R 775 "${{ env.DEPLOY_DIR }}/config"
+            chmod -R 775 "${{ env.DEPLOY_DIR }}/plugins"
+            chmod -R 775 "${{ env.DEPLOY_DIR }}/webroot/files"
+            chmod -R 775 "${{ env.DEPLOY_DIR }}/tmp"
+            chmod -R 775 "${{ env.DEPLOY_DIR }}/db"
+
+            # .htaccessファイルを書き換え
+            cat > .htaccess <<'EOF'
+            <IfModule mod_rewrite.c>
+            RewriteEngine on
+            RewriteBase    /
+            RewriteRule    ^(\.well-known/.*)$ $1 [L]
+            RewriteRule    ^$    ${{ env.DEPLOY_NAME }}/webroot/    [L]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule ^ ${{ env.DEPLOY_NAME }}/webroot/index.php [L]
+            </IfModule>
+            EOF
+
+            # Composerで依存パッケージをインストール
+            composer install
+
+            # プラグイン内のアセットをコピー
+            bin/cake plugin assets copy
+
+            # データベースマイグレーションを実行
+            bin/cake migrations migrate
+
+            # キャッシュをクリア
+            bin/cake cache clear_all
+
+      # レビューURLを表示
+      - name: Output Review URL
+        run: |
+          echo "Review environment is available: ${{ env.REVIEW_URL }}"
+
+  # PRが閉じられたとき、レビュー環境を削除
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Delete Review Environment
+
+    steps:
+      # サーバー上のレビュー環境を削除
+      - name: Delete review environment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          script: |
+            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
+              echo "Deleting review environment: ${{ env.DEPLOY_DIR }}"
+              sudo rm -rf "${{ env.DEPLOY_DIR }}"
+            else
+              echo "No review environment found for PR#${{ github.event.pull_request.number }}"
+            fi
