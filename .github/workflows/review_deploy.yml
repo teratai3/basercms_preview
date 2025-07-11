@@ -1,0 +1,83 @@
+name: Deploy CakePHP Review Environment
+
+# このWorkflowはPull Requestイベントで動作する
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  # PR作成・更新時にレビュー環境をデプロイ
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    name: Deploy Review Environment
+
+    steps:
+      # リポジトリのコードをチェックアウト
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 必要な環境変数をセット
+      - name: Set Environment Variables
+        run: |
+          echo "PROJECT_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "DEPLOY_DIR=/var/www/html/${PROJECT_NAME}-pr${PR_NUMBER}" >> $GITHUB_ENV
+          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${PROJECT_NAME}-pr${PR_NUMBER}" >> $GITHUB_ENV
+
+      # サーバーにCakePHPプロジェクトを転送
+      - name: Sync Files to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          source: "."                      # 現在のディレクトリ配下すべてを送信
+          target: "${DEPLOY_DIR}"          # PR用のディレクトリに配置
+
+      # サーバー上でレビュー環境をセットアップ
+      - name: Set Up CakePHP Configs
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          script: |
+            cd ${DEPLOY_DIR}
+
+            # Composerで依存パッケージをインストール
+            composer install
+
+            # データベースマイグレーションを実行
+            bin/cake migrations migrate
+
+            # キャッシュをクリア
+            bin/cake cache clear_all
+
+      # レビューURLを表示
+      - name: Output Review URL
+        run: |
+          echo "Review environment is available: $REVIEW_URL"
+
+  # PRが閉じられたとき、レビュー環境を削除
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Delete Review Environment
+
+    steps:
+      # サーバー上のレビュー環境を削除
+      - name: Delete review environment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
+          script: |
+            DEPLOY_DIR=/var/www/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}
+            if [ -d "$DEPLOY_DIR" ]; then
+              echo "Deleting review environment: $DEPLOY_DIR"
+              rm -rf "$DEPLOY_DIR"
+            else
+              echo "No review environment found for PR#${{ github.event.pull_request.number }}"
+            fi
