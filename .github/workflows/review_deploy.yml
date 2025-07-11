@@ -4,6 +4,10 @@ name: Deploy CakePHP Review Environment
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+env:
+  DEPLOY_NAME: "${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}"
+  DEPLOY_DIR: "/var/www/html/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}"
+  REVIEW_URL: "https://${{ secrets.SITE_DOMAIN }}/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}"
 
 jobs:
   # PR作成・更新時にレビュー環境をデプロイ
@@ -16,13 +20,6 @@ jobs:
       # リポジトリのコードをチェックアウト
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      # 必要な環境変数をセット
-      - name: Set Environment Variables
-        run: |
-          echo "DEPLOY_NAME=${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "DEPLOY_DIR=/var/www/html/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "REVIEW_URL=https://${{ secrets.SITE_DOMAIN }}/${GITHUB_REPOSITORY##*/}-pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       # 先に古いディレクトリを削除
       - name: Clean Up Old PR Directory
