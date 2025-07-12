@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch: # デバック用
 
 env:
   DEPLOY_DIR: "/var/www/html/staging/${{ github.event.repository.name }}"
