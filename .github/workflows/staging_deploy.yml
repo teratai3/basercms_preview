@@ -1,0 +1,55 @@
+name: DEploy CakePHP to Staging
+on: 
+  push:
+    branches:
+      - main
+  workflow_dispatch: # デバック用
+
+env:
+  DEPLOY_DIR: "/var/www/html/staging/${{ github.event.repository.name }}"
+  DEPLOY_NAME: "staging/{{ github.event.repository.name }}"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging Server (差分デプロイ)
+
+    steps:
+      # サーバーにSSH接続して git pull & セットアップ
+      - name: SSH to server and deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ${{ secrets.STAGING_SERVER_USER }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          script: |
+            cd ${{ env.DEPLOY_DIR }}
+
+            echo "Fetching latest code from Git..."
+            git fetch --all
+            git reset --hard origin/main
+
+            # .htaccessファイルを書き換え
+            cat > .htaccess <<'EOF'
+            <IfModule mod_rewrite.c>
+            RewriteEngine on
+            RewriteBase    /
+            RewriteRule    ^(\.well-known/.*)$ $1 [L]
+            RewriteRule    ^$    ${{ env.DEPLOY_NAME }}/webroot/    [L]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule ^ ${{ env.DEPLOY_NAME }}/webroot/index.php [L]
+            </IfModule>
+            EOF
+
+            echo "Installing composer dependencies..."
+            composer install
+
+            echo "Copying plugin assets..."
+            bin/cake plugin assets copy
+
+            echo "Running database migrations..."
+            bin/cake migrations migrate
+
+            echo "Clearing cache..."
+            bin/cake cache clear_all
