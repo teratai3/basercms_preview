@@ -6,8 +6,8 @@ on:
   workflow_dispatch: # デバック用
 
 env:
-  DEPLOY_DIR: "/var/www/html/staging/${{ github.event.repository.name }}"
-  DEPLOY_NAME: "staging/{{ github.event.repository.name }}"
+  DEPLOY_DIR: "/var/www/html/${{ github.event.repository.name }}"
+  DEPLOY_NAME: "${{ github.event.repository.name }}"
 
 jobs:
   deploy:
@@ -19,9 +19,9 @@ jobs:
       - name: SSH to server and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.STAGING_SERVER_HOST }}
-          username: ${{ secrets.STAGING_SERVER_USER }}
-          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          host: ${{ secrets.REVIEW_SERVER_HOST }}
+          username: ${{ secrets.REVIEW_SERVER_USER }}
+          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           script: |
             cd ${{ env.DEPLOY_DIR }}
 
