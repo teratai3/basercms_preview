@@ -77,7 +77,7 @@ jobs:
     name: Delete Review Environment
 
     steps:
-      # サーバー上のレビュー環境を削除
+      # サーバー上のレビュー環境をSSH接続して削除
       - name: Delete review environment
         uses: appleboy/ssh-action@v1.0.0
         with:
