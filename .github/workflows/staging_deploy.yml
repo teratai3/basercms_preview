@@ -6,8 +6,8 @@ on:
   workflow_dispatch: # デバック用
 
 env:
-  DEPLOY_DIR: "/var/www/html/staging/${{ github.event.repository.name }}"
-  DEPLOY_NAME: "staging/{{ github.event.repository.name }}"
+  DEPLOY_DIR: "/var/www/html/${{ github.event.repository.name }}"
+  DEPLOY_NAME: "${{ github.event.repository.name }}"
 
 jobs:
   deploy:
