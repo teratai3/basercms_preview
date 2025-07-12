@@ -29,6 +29,7 @@ jobs:
             if [ ! -d "${{ env.DEPLOY_DIR }}/.git" ]; then
               echo "Review directory not found. Cloning repository..."
               sudo mkdir -p "${{ env.DEPLOY_DIR }}"
+              sudo chown -R $USER:$USER "${{ env.DEPLOY_DIR }}"
               git clone --branch ${{ github.head_ref }} git@github.com:${{ github.repository }} "${{ env.DEPLOY_DIR }}"
             else
               echo "Review directory exists. Fetching latest changes..."
