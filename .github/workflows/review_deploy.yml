@@ -4,6 +4,7 @@ name: Deploy CakePHP Review Environment
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
 env:
   DEPLOY_NAME: "${{ github.event.repository.name }}-pr${{ github.event.pull_request.number }}"
   DEPLOY_DIR: "/var/www/html/${{ github.event.repository.name }}-pr${{ github.event.pull_request.number }}"
@@ -17,52 +18,25 @@ jobs:
     name: Deploy Review Environment
 
     steps:
-      # リポジトリのコードをチェックアウト
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # 先に古いディレクトリを削除
-      - name: Clean Up Old PR Directory
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.REVIEW_SERVER_HOST }}
-          username: ${{ secrets.REVIEW_SERVER_USER }}
-          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
-          script: |
-            # デプロイ前に古いディレクトリを削除
-            if [ -d "${{ env.DEPLOY_DIR }}" ]; then
-              echo "Cleaning up old PR directory: ${{ env.DEPLOY_DIR }}"
-              sudo rm -rf "${{ env.DEPLOY_DIR }}"
-            fi
-            # デプロイ先ディレクトリを作成
-            mkdir -p "${{ env.DEPLOY_DIR }}"
-
-      # サーバーにCakePHPプロジェクトを転送
-      - name: Sync Files to Server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.REVIEW_SERVER_HOST }}
-          username: ${{ secrets.REVIEW_SERVER_USER }}
-          key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
-          source: "."                      # 現在のディレクトリ配下すべてを送信
-          target: "${{ env.DEPLOY_DIR }}"          # PR用のディレクトリに配置
-
       # サーバー上でレビュー環境をセットアップ
-      - name: Set Up CakePHP Configs
+      - name: SSH to server and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.REVIEW_SERVER_HOST }}
           username: ${{ secrets.REVIEW_SERVER_USER }}
           key: ${{ secrets.REVIEW_SERVER_SSH_KEY }}
           script: |
-            cd ${{ env.DEPLOY_DIR }}
-
-            # baserCMS権限付与
-            chmod -R 775 "${{ env.DEPLOY_DIR }}/config"
-            chmod -R 775 "${{ env.DEPLOY_DIR }}/plugins"
-            chmod -R 775 "${{ env.DEPLOY_DIR }}/webroot/files"
-            chmod -R 775 "${{ env.DEPLOY_DIR }}/tmp"
-            chmod -R 775 "${{ env.DEPLOY_DIR }}/db"
+            if [ ! -d "${{ env.DEPLOY_DIR }}/.git" ]; then
+              echo "Review directory not found. Cloning repository..."
+              sudo mkdir -p "${{ env.DEPLOY_DIR }}"
+              cd "${{ env.DEPLOY_DIR }}"
+              git clone --branch ${{ github.head_ref }} git@github.com:${{ github.repository }}
+            else
+              echo "Review directory exists. Fetching latest changes..."
+              cd "${{ env.DEPLOY_DIR }}"
+              git fetch origin
+              git reset --hard origin/${{ github.head_ref }}
+            fi
 
             # .htaccessファイルを書き換え
             cat > .htaccess <<'EOF'
